@@ -4,73 +4,93 @@ import "./App.css";
 const ButtonTypes = ["green", "red", "yellow", "blue"];
 
 function App() {
-  const [text, setText] = useState<string>("");
-  const [count, setCount] = useState<number>(0);
+  const [message, setMessage] = useState<string>("Click 'Start' to Play");
+  const [score, setScore] = useState<number>(0);
   const [comp, setComp] = useState<Array<string>>([]);
-  const [user, setUser] = useState<Array<string>>([]);
-  const [systemTurn, setSystemTurn] = useState<boolean>(true);
+  const [userSequence, setUserSequence] = useState<Array<string>>([]);
+  const [isSystemTurn, setIsSystemTurn] = useState<boolean>(false);
 
   useEffect(() => {
-    comp.forEach((item, index) => {
+    if (isSystemTurn) {
+      playSequence();
+    }
+  }, [isSystemTurn, comp]);
+
+  const playSequence = () => {
+    comp.forEach((color, index) => {
       setTimeout(() => {
-        const element = document.getElementById(item);
-        if (element) {
-          element.classList.add("active");
-          setTimeout(() => {
-            element.classList.remove("active");
-          }, 500);
-        }
+        activateButton(color);
       }, index * 1000);
     });
-    setTimeout(() => {
-      setSystemTurn(false);
-    }, comp.length * 1000);
-  }, [comp]);
 
-  const startGame = () => {
-    setText("");
-    let random = ButtonTypes[Math.floor(Math.random() * ButtonTypes.length)];
-    setComp((prev) => [...prev, random]);
+    setTimeout(() => {
+      setMessage("Your Turn");
+      setIsSystemTurn(false);
+    }, comp.length * 1000);
   };
 
-  const userTurn = (button: string) => {
-    if (systemTurn) return;
-    const array = [...user, button];
-    setUser((prev) => [...prev, button]);
-    document.getElementById(button)?.classList.add("active");
-    setTimeout(() => {
-      document.getElementById(button)?.classList.remove("active");
-      let correctSeq = true;
-      for (let i = 0; i < array.length; i++) {
-        if (array[i] !== comp[i]) {
-          correctSeq = false;
-          break;
-        }
-      }
-      if (!correctSeq) {
-        setCount(0);
-        setComp([]);
-        setText("Play Again:(");
-      }
-      if (correctSeq && array.length === comp.length) {
-        setTimeout(() => {
-          setCount((prev) => prev + 1);
-          setUser([]);
-          startGame();
-        }, 500);
-      }
-    }, 500);
+  const activateButton = (color: string) => {
+    const button = document.getElementById(color);
+    if (button) {
+      button.classList.add("active");
+      setTimeout(() => {
+        button.classList.remove("active");
+      }, 500);
+    }
+  };
+
+  const startGame = () => {
+    setMessage("Watch the Sequence");
+    setScore(0);
+    setComp([]);
+    setUserSequence([]);
+    addColorToSequence();
+  };
+
+  const addColorToSequence = () => {
+    const randomColor =
+      ButtonTypes[Math.floor(Math.random() * ButtonTypes.length)];
+      setComp((prev) => [...prev, randomColor]);
+    setIsSystemTurn(true);
+    setUserSequence([]);
+  };
+
+  const handleUserClick = (color: string) => {
+    if (isSystemTurn) return;
+
+    const newUserSequence = [...userSequence, color];
+    setUserSequence(newUserSequence);
+    activateButton(color);
+
+    if (!checkUserSequence(newUserSequence)) {
+      setMessage("Incorrect! Try Again.");
+      setComp([]);
+      setUserSequence([]);
+      setIsSystemTurn(false);
+      return;
+    }
+
+    if (newUserSequence.length === comp.length) {
+      setScore((prev) => prev + 1);
+      setMessage("Well Done! Watch the Next Sequence.");
+      setTimeout(addColorToSequence, 1000);
+    }
+  };
+
+  const checkUserSequence = (sequence: string[]) => {
+    return sequence.every((color, index) => color === comp[index]);
   };
 
   return (
-    <div className="simon-container ">
-      <h1>Simon Says {text}</h1>
+    <div className="simon-container">
+      <h1>Simon Says: {message}</h1>
       <div className="game-board">
-        {ButtonTypes.map((button) => (
+        {ButtonTypes.map((color) => (
           <div
-            className={`color-button`}
-            id={button}
-            onClick={() => userTurn(button)}
+            key={color}
+            className={`color-button ${color}`}
+            id={color}
+            onClick={() => handleUserClick(color)}
           ></div>
         ))}
       </div>
@@ -81,7 +101,7 @@ function App() {
           </button>
         )}
         <div className="score">
-          Score: <span id="score">{count}</span>
+          Score: <span id="score">{score}</span>
         </div>
       </div>
     </div>
